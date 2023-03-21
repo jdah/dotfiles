@@ -1,6 +1,9 @@
 -- Setup nvim-cmp.
 local cmp = require'cmp'
 
+require("cmp_nvim_ultisnips").setup{}
+local cmp_ultisnips_mappings = require("cmp_nvim_ultisnips.mappings")
+
 cmp.setup({
     snippet = {
       expand = function(args)
@@ -18,13 +21,13 @@ cmp.setup({
           i = cmp.mapping.abort(),
           c = cmp.mapping.close(),
         }),
-      ['<CR>'] = cmp.mapping.confirm({ select = false }), -- Accept currently elected item. Set `select` to `false` to only confirm explicitly selected items.
+      ['<CR>'] = cmp.mapping.confirm({ select = false, behavior = cmp.ConfirmBehavior.Insert }),
     },
     sources = cmp.config.sources({
         { name = 'nvim_lsp' },
-        { name = 'vsnip' }, -- For vsnip users.
+        -- { name = 'vsnip' }, -- For vsnip users.
         -- { name = 'luasnip' }, -- For luasnip users.
-        -- { name = 'ultisnips' }, -- For ultisnips users.
+        { name = 'ultisnips' }, -- For ultisnips users.
         -- { name = 'snippy' }, -- For snippy users.
       }, {
         { name = 'buffer' },

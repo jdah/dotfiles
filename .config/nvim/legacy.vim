@@ -1,14 +1,16 @@
+let g:UltiSnipsExpandTrigger = '<f5>'
+
 " project specific, but oh well. better than exrc!
-au FileType cpp nnoremap <silent> ;m :Focus make build -j 10<CR>:Dispatch<CR>
-au FileType cpp nnoremap <silent> ;r :Focus make run -j 10<CR>:Dispatch<CR>
-au FileType cpp nnoremap <silent> ;cm :Focus make clean; make build -j 10<CR>:Dispatch<CR>
-au FileType cpp nnoremap <silent> ;cr :Focus make clean; make run -j 10<CR>:Dispatch<CR>
-au FileType cpp nnoremap <silent> ;d :VimuxRunCommand "lldb ./bin/game"<CR>
-au FileType cpp nnoremap <silent> ;dm :VimuxRunCommand "make build -j 10 && lldb ./bin/game"<CR>
-au FileType cpp nnoremap <silent> ;dc :VimuxRunCommand "make clean -j 10 && make build -j 10 && lldb ./bin/game"<CR>
-au FileType cpp nnoremap <silent> ;tm :VimuxRunCommand "make build -j 10"<CR>
-au FileType cpp nnoremap <silent> ;tr :VimuxRunCommand "make run -j 10"<CR>
-au FileType cpp nnoremap <silent> ;tc :VimuxRunCommand "make clean && make run -j 10"<CR>
+au FileType c nnoremap <silent> ;m :Focus make build -j 10<CR>:Dispatch<CR>
+au FileType c nnoremap <silent> ;r :Focus make run -j 10<CR>:Dispatch<CR>
+au FileType c nnoremap <silent> ;cm :Focus make clean; make build -j 10<CR>:Dispatch<CR>
+au FileType c nnoremap <silent> ;cr :Focus make clean; make run -j 10<CR>:Dispatch<CR>
+au FileType c nnoremap <silent> ;d :VimuxRunCommand "lldb ./bin/game"<CR>
+au FileType c nnoremap <silent> ;dm :VimuxRunCommand "make build -j 10 && lldb ./bin/game"<CR>
+au FileType c nnoremap <silent> ;dc :VimuxRunCommand "make clean -j 10 && make build -j 10 && lldb ./bin/game"<CR>
+au FileType c nnoremap <silent> ;tm :VimuxRunCommand "make build -j 10"<CR>
+au FileType c nnoremap <silent> ;tr :VimuxRunCommand "make run -j 10"<CR>
+au FileType c nnoremap <silent> ;tc :VimuxRunCommand "make clean && make run -j 10"<CR>
 
 au FileType zig nnoremap <silent> ;m :make<CR>
 au FileType zig nnoremap <silent> ;r :make run<CR>
@@ -25,8 +27,129 @@ au BufEnter,BufNew *.hpp nnoremap <silent> ;vp :rightbelow vs %<.cpp<CR>
 au BufEnter,BufNew *.cpp nnoremap <silent> ;xp :leftabove split %<.hpp<CR>
 au BufEnter,BufNew *.hpp nnoremap <silent> ;xp :rightbelow split %<.cpp<CR>
 
+" switch between h and c
+au BufEnter,BufNew *.c nnoremap <silent> ;p :e %<.h<CR>
+au BufEnter,BufNew *.h nnoremap <silent> ;p :e %<.c<CR>
+
+au BufEnter,BufNew *.c nnoremap <silent> ;vp :leftabove vs %<.h<CR>
+au BufEnter,BufNew *.h nnoremap <silent> ;vp :rightbelow vs %<.c<CR>
+
+au BufEnter,BufNew *.c nnoremap <silent> ;xp :leftabove split %<.h<CR>
+au BufEnter,BufNew *.h nnoremap <silent> ;xp :rightbelow split %<.c<CR>
+
+" open same file in vertical/horizonal splits
+nnoremap <silent> ;vmp :leftabove vsplit %<CR>
+nnoremap <silent> ;xmp :leftabove split %<CR>
+
 " surround with std::optional
 nnoremap <silent> ;cso :execute 's/\(' . expand('<cWORD>') . '\)/std::optional<\1>'<CR>:noh<CR>
+
+" function which copies .hpp/.cpp and auto-rename in buffers
+function! CPPCopy(path, newName, oldTypeName, newTypeName)
+    let l:basePath  = fnamemodify(a:path, ':h')
+    let l:baseName = split(fnamemodify(a:path, ':t'), '\.')[0]
+    let l:oldCppPath = join([l:basePath, "/", l:baseName, ".cpp"], "")
+    let l:oldHppPath = join([l:basePath, "/", l:baseName, ".hpp"], "")
+    let l:newCppPath = join([l:basePath, "/", a:newName, ".cpp"], "")
+    let l:newHppPath = join([l:basePath, "/", a:newName, ".hpp"], "")
+
+    let l:oldCppExists = filereadable(l:oldCppPath)
+
+	if !filereadable(l:oldHppPath)
+		echo "aborted: file " . l:oldHppPath " does not exist"
+		return
+	endif
+
+	if filereadable(l:newHppPath)
+		let l:text = "File " . l:newHppPath . " already exists, continue?"
+		if confirm(l:text, "&y\n&n", 1) != 1
+			echo "aborted"
+			return
+		endif
+	endif
+
+	if l:oldCppExists && filereadable(l:newCppPath)
+		let l:text = "File " . l:newCppPath . " already exists, continue?"
+		if confirm(l:text, "&y\n&n", 1) != 1
+			echo "aborted"
+			return
+		endif
+	endif
+
+	let l:sed0 = join(["s/", tolower(a:oldTypeName), "/", tolower(a:newTypeName), "/g"], "")
+	let l:oldTypeNameCamel = substitute(a:oldTypeName, "<./", "\u&", "")
+	let l:newTypeNameCamel = substitute(a:newTypeName, "<./", "\u&", "")
+	let l:sed1 = join(["s/", l:oldTypeNameCamel, "/", l:newTypeNameCamel, "/g"], "")
+
+	call system(join(["cp ", l:oldHppPath, " ", l:newHppPath], ""))
+	call system(join(["sed -i '' '", l:sed0, "' ", l:newHppPath], ""))
+	call system(join(["sed -i '' '", l:sed1, "' ", l:newHppPath], ""))
+
+    if l:oldCppExists
+	    call system(join(["cp ", l:oldCppPath, " ", l:newCppPath], ""))
+	    call system(join(["sed -i '' '", l:sed0, "' ", l:newCppPath], ""))
+	    call system(join(["sed -i '' '", l:sed1, "' ", l:newCppPath], ""))
+    endif
+
+	let choice = confirm("open " . l:newHppPath . " in:", "&here\n&vsplit\n&hsplit\n&none", 4)
+	if choice == 1
+		exec "e " . l:newHppPath
+	elseif choice == 2
+		exec "vsplit " . l:newHppPath
+	elseif choice == 3
+		exec "split " . l:newHppPath
+	endif
+endfunction
+
+function! CPPCopyComplete(argLead, cmdLine, cursorPos)
+	if count((a:cmdLine)[0:(a:cursorPos)], " ") > 1
+		return []
+	else
+		return getcompletion(a:argLead, 'file')
+	endif
+endfunction
+
+command! -nargs=* -complete=customlist,CPPCopyComplete CPPCopy call CPPCopy(<f-args>)
+
+function! CPPImpl() range
+	" convert lines into marks so things aren't messed up when deleted
+	execute ':' . a:firstline
+	normal 0
+	normal mm
+	execute ':' . a:lastline
+	normal $
+	normal mn
+
+	let myRange = "'m,'n"
+
+	" ask user for class name
+	let className = input("class name: ")
+
+	" remove indentation
+	'm,'nleft
+
+	" remove override
+	execute 'lockmarks ' . myRange . 's/\(\.*\)\s+(override)\s*\(.*\)/\1 \2/ge'
+
+	" remove explicit, virtual
+	execute 'lockmarks ' . myRange . 's/(virtual)\s*\(.*\);/\1 \2;/ge'
+
+	" replace all lines with definitions
+	" \1: return type
+	" \2: return type extras (*/&/etc.)
+	" \3: function name
+	" \4: rest of signature excluding ";"
+	"                     \1        \2                \3     \4
+	execute myRange . 's/\(.*\)\s\+\([^a-zA-Z0-9_]*\)\(.*\)(\(.*\);$/\1 \' . className . '::\3(\4 {\r\r}/g'
+
+	" remove lines with comments
+    execute 'lockmarks ' . myRange . 'g/\/\//d'
+endfunction
+
+command! -range PassRange CPPImpl call CPPImpl(<f-args>)
+
+" cpi -> CPPImpl
+vnoremap <silent> <Leader>cpi :<C-U>CPPImpl<CR>
 
 " zig config
 au FileType zig nmap <Leader>dt <cmd>lua vim.lsp.buf.definition()<CR>
@@ -70,7 +193,11 @@ nmap .a <Plug>(easymotion-jumptoanywhere)
 set updatetime=100
 
 " no hidden buffers
-set hidden&
+set nohidden
+
+" history
+set undodir=~/.cache/nvim/undodir
+set undofile
 
 " automatically read on change
 set autoread
@@ -128,7 +255,7 @@ set grepprg=rg\ --vimgrep\ --smart-case\ --follow
 
 " Colorscheme
 set termguicolors
-let g:gruvbox_contrast_dark='medium'
+let g:gruvbox_contrast_dark='hard'
 let g:gruvbox_contrast_light='hard'
 colorscheme gruvbox
 hi LspCxxHlGroupMemberVariable guifg=#83a598
@@ -181,6 +308,15 @@ nnoremap <silent> <C-p> :Files<CR>
 
 " C-g: FZF ('g'rep)/find in files
 nnoremap <silent> <C-g> :Rg<CR>
+
+" <leader>p: find and replace with nvim-spectre
+nnoremap <silent> <leader>l :lua require('spectre').open()<CR>
+
+" <leader>fr: find and replace in current file
+nnoremap <silent> <leader>g viw:lua require('spectre').open_file_search()<CR>
+
+" <leader>s: symbols outline
+nnoremap <silent> <leader>s :SymbolsOutline<CR>
 
 " Function to set tab width to n spaces
 function! SetTab(n)
@@ -246,8 +382,8 @@ autocmd BufRead,BufNewFile *.sc setlocal colorcolumn=80 | SetTab 4
 " nim config
 autocmd BufRead,BufNewFile *.nim  setlocal colorcolumn=80
 autocmd BufRead,BufNewFile *.nims setlocal colorcolumn=80
-autocmd BufRead,BufNewFile *.nim SetTab 2
-autocmd BufRead,BufNewFile *.nims SetTab 2
+autocmd BufRead,BufNewFile *.nim SetTab 4
+autocmd BufRead,BufNewFile *.nims SetTab 4
 
 " ASM == JDH8
 augroup jdh8_ft
@@ -314,3 +450,14 @@ function! SynStack()
   endif
   echo map(synstack(line('.'), col('.')), 'synIDattr(v:val, "name")')
 endfunc
+
+" nvim-dap bindings
+nnoremap <silent> <F5> <Cmd>lua require'dap'.continue()<CR>
+nnoremap <silent> <F10> <Cmd>lua require'dap'.step_over()<CR>
+nnoremap <silent> <F11> <Cmd>lua require'dap'.step_into()<CR>
+nnoremap <silent> <F12> <Cmd>lua require'dap'.step_out()<CR>
+nnoremap <silent> <Leader>b <Cmd>lua require'dap'.toggle_breakpoint()<CR>
+nnoremap <silent> <Leader>B <Cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<CR>
+nnoremap <silent> <Leader>lp <Cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<CR>
+nnoremap <silent> <Leader>dr <Cmd>lua require'dap'.repl.open()<CR>
+nnoremap <silent> <Leader>dl <Cmd>lua require'dap'.run_last()<CR>

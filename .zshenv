@@ -8,6 +8,14 @@ setopt appendhistory
 setopt INC_APPEND_HISTORY
 setopt SHARE_HISTORY
 
+export PATH="${PATH:+${PATH}:}/opt/nim/bin"
+export PATH="${PATH:+${PATH}:}/opt/zig/build/bin"
+export PATH="${PATH:+${PATH}:}/opt/zls/zig-out/bin"
+export PATH="${PATH:+${PATH}:}/opt/genie"
+export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+export PATH="~/.nimble/bin:$PATH"
+export PATH="/opt/bin:$PATH"
+
 # .zshrc, etc. are located here
 if [ -z "$INTELLIJ_ENVIRONMENT_READER" ]; then
     export ZDOTDIR=~/.config/zsh
